@@ -1,5 +1,4 @@
 local CollectionService = game:GetService("CollectionService")
---local CashObject = require(game.ServerScriptService:WaitForChild("Cash"))
 local UpgradedCash = {}
 
 function setupUpgrader(upgrader: Model)
@@ -9,11 +8,12 @@ function setupUpgrader(upgrader: Model)
 	local UpgraderPart = upgrader:FindFirstChild("UpgraderPart") :: BasePart
 	if not UpgraderPart then return end
 	
+	UpgradedCash[upgrader] = {}
 	UpgraderPart.Touched:Connect(function(hit: BasePart)
 		local OwnerUserID = Tycoon:GetAttribute("OwnerUserID")
 		if not OwnerUserID then return end
 		
-		if UpgradedCash[hit] then return end
+		if UpgradedCash[upgrader][hit] then return end
 		
 		if not hit:HasTag("Cash") then return end
 
@@ -28,11 +28,11 @@ function setupUpgrader(upgrader: Model)
 		local newAmount = hit:GetAttribute("CashAmount") * Multiplier
 		hit:SetAttribute("CashAmount", newAmount)
 		
-		UpgradedCash[hit] = true
+		UpgradedCash[upgrader][hit] = true
 		hit:FindFirstChild("BillboardGui"):FindFirstChild("TextLabel").Text = "$"..math.round(newAmount*100)/100
 		task.delay(30, function()
-			if UpgradedCash[hit] then
-				UpgradedCash[hit] = nil
+			if UpgradedCash[upgrader] and UpgradedCash[upgrader][hit] then
+				UpgradedCash[upgrader][hit] = nil
 			end
 		end)
 	end)
@@ -40,9 +40,9 @@ end
 
 function removeUpgrader(upgrader: Model)
 	if upgrader then
+		UpgradedCash[upgrader] = nil
 		upgrader:Destroy()
 		upgrader = nil
-		UpgradedCash = {}
 	end
 	print("upgrader is removed")
 end
@@ -51,4 +51,4 @@ for _, button in CollectionService:GetTagged("Upgrader") do
 	setupUpgrader(button)
 end
 CollectionService:GetInstanceAddedSignal("Upgrader"):Connect(setupUpgrader)
-CollectionService:GetInstanceRemovedSignal("Upgrader"):Connect(setupUpgrader)
+CollectionService:GetInstanceRemovedSignal("Upgrader"):Connect(removeUpgrader)

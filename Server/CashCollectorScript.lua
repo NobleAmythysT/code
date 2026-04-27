@@ -1,14 +1,16 @@
+local ServerScriptService = game:GetService("ServerScriptService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local configurePlayer = require(game.ReplicatedStorage.configurePlayer)
---local OwnerUserID
+local PlayerDataService = require(ServerScriptService:WaitForChild("PlayerDataService"))
+
+local collectMoney = ReplicatedStorage.collectMoney :: RemoteEvent
+local debounce = {}
 
 function setupCashCollector(model: Model)
 	local Tycoon = model.Parent.Parent
 	if not Tycoon then return end
-
-	--OwnerUserID = Tycoon:GetAttribute("OwnerUserID")
-	--if not OwnerUserID then return end
 
 	local CashMonitor = model.Parent:FindFirstChild("CashMonitor") :: Model
 	if not CashMonitor then return end
@@ -32,24 +34,38 @@ function setupCashCollector(model: Model)
 		end
 	end)
 	
-	CashCollectPart.Touched:Connect(function(hit: BasePart)
+	debounce[model] = {}
+	CashCollectPart.Touched:Connect(function(hit: BasePart)		
 		local player = configurePlayer(hit)
 		if not player then return end
 		
-		--if not OwnerUserID then
-		--	OwnerUserID = Tycoon:GetAttribute("OwnerUserID")
-		--end
-		local OwnerUserID = Tycoon:GetAttribute("OwnerUserID")
-		if not OwnerUserID or player.UserId ~= OwnerUserID then return end
+		if debounce[model][player] then return end
+		debounce[model][player] = true
+		task.delay(1, function()
+			debounce[model][player] = nil
+		end)
 		
-		player:FindFirstChild("leaderstats"):FindFirstChild("Money").Value += CashMonitor:GetAttribute("AccumulatedCash")
+		local OwnerUserID = Tycoon:GetAttribute("OwnerUserID")
+		if not OwnerUserID then return end 
+		
+		if player.UserId ~= OwnerUserID then
+			collectMoney:FireClient(player, model, false)
+			return
+		end
+		
+		PlayerDataService:Update(player, "Money", function(currentMoney)
+			return currentMoney + CashMonitor:GetAttribute("AccumulatedCash")
+		end)
+		collectMoney:FireClient(player, model, true)
 		CashMonitor:SetAttribute("AccumulatedCash", 0)
-		--print(TotalCash)
 	end)
 end
 
 function removeCashCollector(model: Model)
 	if model then
+		if debounce[model] then
+			debounce[model] = nil
+		end
 		model:Destroy()
 		model = nil
 	end

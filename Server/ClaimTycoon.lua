@@ -1,17 +1,17 @@
+local ServerScriptService = game:GetService("ServerScriptService")
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local configurePlayer = require(ReplicatedStorage:FindFirstChild("configurePlayer"))
+local getTemplate = require(ServerScriptService:WaitForChild("getTemplate"))
+local spawnPurchased = require(ServerScriptService:WaitForChild("spawnPurchased"))
+local CashObject = require(game.ServerScriptService:WaitForChild("Cash"))
+local PlayerDataService = require(ServerScriptService:WaitForChild("PlayerDataService"))
 
 local debounce = {} --self explainatory
 local tycoonClaimed = {} --stores tycoon with player as index
 local tycoonOwners = {} --stores player with tycoon as index
 local claimDoor = ReplicatedStorage.claimDoor :: RemoteEvent
-
-local StarterTemplate = ReplicatedStorage:FindFirstChild("StarterTemplate")
-local starterTemplateButtonsFolder = StarterTemplate:FindFirstChild("buttons")
-local starterTemplateModelsFolder = StarterTemplate:FindFirstChild("models")
-local starterTemplateBase = StarterTemplate:FindFirstChild("base")
 
 local function displayOwnerName(door: BasePart, player: Player)
 	if door:FindFirstChild("OwnerBillboard") then door.OwnerBillboard:Destroy() end
@@ -43,6 +43,22 @@ local function spawnDoorEffects(door: BasePart, player: Player, success: boolean
 	if success then displayOwnerName(door, player) end
 	task.wait(seconds)
 	debounce[player] = nil
+end
+
+--[[Get and load the data.
+	(EX)load Dued1's data
+]]
+local function loadTycoon(player: Player, Tycoon: Folder)
+	--get set upate
+	local data = PlayerDataService:GetData(player)
+	if not data then return end
+
+	local unlocked = data.Tycoon.Unlocked
+
+	for id, _ in pairs(unlocked) do
+		spawnPurchased.Model(Tycoon, id)
+		spawnPurchased.Button(Tycoon, id)
+	end
 end
 
 --[[lets say the player is Dued1, he just joined the server
@@ -88,16 +104,20 @@ local function configureTycoonOwner(door: BasePart, hit: BasePart)
 		return
 	end
 	
-	--[[(EX) it's time to give Dued1 the tycoon!
+	--[[Assign the player the ownership of the tycoon & the tycoon who its owner is, afterwards, load the tycoon
+		(EX) it's time to give Dued1 the tycoon!
 		assign Dued1 to the owner list(tycoonOwners) with the Crimson Cherries tycoon as value
 		and assign the tycoon CrimsonCherries to the claimed list(tycoonClaimed) with Dued1 as value
-		additionally, you can add the owner's user id as attribute to the tycoon for extra clariance i guess
+		additionally, you can add the owner's user id as attribute to the tycoon for extra clearance
+		and then load the tycoon
 	]]
 	spawnDoorEffects(door, player, true)
 	tycoonClaimed[Tycoon] = player :: Player
 	tycoonOwners[player] = Tycoon :: Model
 	print(player.Name.." claimed the tycoon "..slotName..'!')
 	Tycoon:SetAttribute("OwnerUserID", player.UserId)
+	task.wait()
+	loadTycoon(player, Tycoon)
 	
 	--[[(EX) at the end, the owners list and the claimed list both have a new entry
 		tycoonOwners[Dued1] = "CrimsonCherries"
@@ -143,11 +163,15 @@ Players.PlayerRemoving:Connect(function(player: Player, reason: Enum.PlayerExitR
 	--[[(EX) Dued1 may have made progress in his tycoon, now he has left, the tycoon has to turn into what it originally looked like
 		there's this starter template inside replicated storage
 		which consist of 2 uh conveyors and the cash display and button to get da sweet cash
-		and most importantly the starter button do begin all life
+		and most importantly the starter button to begin all life
 	]]
 	local buttonsFolder = Tycoon:FindFirstChild("buttons")
 	local modelsFolder = Tycoon:FindFirstChild("models")
 	local dropsFolder = Tycoon:FindFirstChild("drops")
+	if not buttonsFolder or not modelsFolder or not dropsFolder then
+		warn("things are missing")
+		return
+	end
 	--[[now you may ask, why delete everything in buttons and models folder and then copy from starter template
 		instead of delete everything else except models matching the starter tycoon name?
 		1. its just much simpler and you dont have to manually hardcode the names
@@ -159,6 +183,15 @@ Players.PlayerRemoving:Connect(function(player: Player, reason: Enum.PlayerExitR
 		if in any ways it fails its probably the player's fault anyway for randomly playing with DEX and deleting the starter template
 		but if that ever happens we should all be in fear cause that means server side exploits are back
 	]]
+	for _, v in dropsFolder:GetChildren() do
+		local Cash = CashObject:GetCashFromPart(v)
+		if Cash then
+			Cash:Destroy()
+		else
+			v:Destroy()
+			v = nil
+		end
+	end
 	for _, v in buttonsFolder:GetChildren() do
 		v:Destroy()
 		v = nil
@@ -167,10 +200,13 @@ Players.PlayerRemoving:Connect(function(player: Player, reason: Enum.PlayerExitR
 		v:Destroy()
 		v = nil
 	end
-	for _, v in dropsFolder:GetChildren() do
-		v:Destroy()
-		v = nil
-	end
+	
+	
+	--you know what i should just make an instance serializer so that items would be more certain to load
+	local StarterTemplate = getTemplate.Starter()
+	local starterTemplateButtonsFolder = StarterTemplate:FindFirstChild("buttons")
+	local starterTemplateModelsFolder = StarterTemplate:FindFirstChild("models")
+	local starterTemplateBase = StarterTemplate:FindFirstChild("base")
 	
 	for _, v in starterTemplateButtonsFolder:GetChildren() do
 		local clone = v:Clone()

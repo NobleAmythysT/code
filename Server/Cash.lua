@@ -1,17 +1,18 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 local dollar = ReplicatedStorage:WaitForChild("dollar") :: BasePart
 local CashRegistry = {}
 
 local Cash = {}
 Cash.__index = Cash
 
-function Cash.New(duration: number, amount: number, spawner: BasePart, ownerUserId: number)
+function Cash.New(duration: number, amount: number, spawner: BasePart, Tycoon: Model, ownerUserId: number)
 	local self = setmetatable({
 		duration = duration,
 		amount = amount,
 		spawnPos = spawner.Position,
 		ownerUserId = ownerUserId,
-		parentFolder = spawner.Parent.Parent.Parent:FindFirstChild("drops") or workspace
+		parentFolder = Tycoon:FindFirstChild("drops") or workspace
 	}, Cash)
 	
 	local part = dollar:Clone()

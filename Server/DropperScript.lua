@@ -16,7 +16,7 @@ function setupDropper(dropper: Model)
 	
 	task.spawn(function()
 		while task.wait(duration) do
-			local Cash = CashObject.New(duration, amount, Spawner, OwnerUserID)
+			local Cash = CashObject.New(duration, amount, Spawner, Tycoon, OwnerUserID)
 			Cash:Spawn()
 		end
 	end)
