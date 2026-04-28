@@ -40,12 +40,6 @@ local function setupButton(button: Model)
 	if not PurchaseObject or not Price then return end
 	
 	--step 2: check if button is already purchased or not
-	--local profiledata = PlayerDataService:GetData(Tycoon:GetAttribute("OwnerUserID"))
-	--if profiledata and profiledata.Tycoon.Unlocked[PurchaseObject] then
-	--	print(PurchaseObject)
-	--	remove(button)
-	--	return
-	--end
 	
 	--step 3: after verifying, now you can do the touched connect
 	hitbox.Touched:Connect(function(hit)
@@ -76,33 +70,32 @@ local function setupButton(button: Model)
 		end
 
 		--check can thou find the models to copy
-		spawnPurchased.Model(Tycoon, PurchaseObject)
-		local templateTycoon = getTemplate.Full()
-		--local templateModelsFolder = templateTycoon:FindFirstChild("models")
-		local templateButtonsFolder = templateTycoon:FindFirstChild("buttons")
-		local templateBase = templateTycoon:FindFirstChild("base")
+		spawnPurchased.AddModel(Tycoon, PurchaseObject)
+		spawnPurchased.AddButton(Tycoon, PurchaseObject)
 
 		--after checking button's attributes and model's availability, deduct money
-		PlayerDataService:Update(player, "Money", function(currentMoney)
-			return currentMoney - Price
-		end)
+		--money.Value = money.Value - Price
+		local PlayerData = PlayerDataService:GetData(player)
+		local purchased = false
+		for i, _ in PlayerData.Tycoon.Unlocked do
+			if i == PurchaseObject then
+				purchased = true
+				break
+			end
+		end
+		if not purchased then
+			PlayerDataService:Update(player, "Money", function(currentMoney)
+				return currentMoney - Price
+			end)
+		end
 		PlayerDataService:Update(player, "Tycoon", function(tycoonUnlocks)
-			tycoonUnlocks.Unlocked[PurchaseObject] = true
-			print(tycoonUnlocks)
+			if not tycoonUnlocks.Unlocked[PurchaseObject] then
+				tycoonUnlocks.Unlocked[PurchaseObject] = true
+			end
 			return tycoonUnlocks
 		end)
 		print("you win")
 		remove(button)
-
-		--make new button
-		for _, v in templateButtonsFolder:GetChildren() do
-			if v:GetAttribute("Dependency") == PurchaseObject then
-				local clone = v:Clone() :: Model
-				clone.Parent = ButtonFolder
-				local objectSpace = templateBase.CFrame:ToObjectSpace(v:GetPivot())
-				clone:PivotTo(Tycoon:FindFirstChild("base").CFrame:ToWorldSpace(objectSpace))
-			end
-		end
 	end)
 end
 

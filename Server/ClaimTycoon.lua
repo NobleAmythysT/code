@@ -45,20 +45,20 @@ local function spawnDoorEffects(door: BasePart, player: Player, success: boolean
 	debounce[player] = nil
 end
 
---[[Get and load the data.
-	(EX)load Dued1's data
-]]
 local function loadTycoon(player: Player, Tycoon: Folder)
-	--get set upate
 	local data = PlayerDataService:GetData(player)
 	if not data then return end
 
 	local unlocked = data.Tycoon.Unlocked
-
+	
+	spawnPurchased.Init(Tycoon)
 	for id, _ in pairs(unlocked) do
-		spawnPurchased.Model(Tycoon, id)
-		spawnPurchased.Button(Tycoon, id)
+		print(id)
+		spawnPurchased.AddModel(Tycoon, id)
+		spawnPurchased.GetButtonMatchingPurchaseObject(Tycoon, id)
+		spawnPurchased.AddButton(Tycoon, id)
 	end
+	spawnPurchased.RemoveAllButtons(Tycoon)
 end
 
 --[[lets say the player is Dued1, he just joined the server
@@ -104,12 +104,10 @@ local function configureTycoonOwner(door: BasePart, hit: BasePart)
 		return
 	end
 	
-	--[[Assign the player the ownership of the tycoon & the tycoon who its owner is, afterwards, load the tycoon
-		(EX) it's time to give Dued1 the tycoon!
+	--[[(EX) it's time to give Dued1 the tycoon!
 		assign Dued1 to the owner list(tycoonOwners) with the Crimson Cherries tycoon as value
 		and assign the tycoon CrimsonCherries to the claimed list(tycoonClaimed) with Dued1 as value
-		additionally, you can add the owner's user id as attribute to the tycoon for extra clearance
-		and then load the tycoon
+		additionally, you can add the owner's user id as attribute to the tycoon for extra clariance i guess
 	]]
 	spawnDoorEffects(door, player, true)
 	tycoonClaimed[Tycoon] = player :: Player
@@ -117,8 +115,8 @@ local function configureTycoonOwner(door: BasePart, hit: BasePart)
 	print(player.Name.." claimed the tycoon "..slotName..'!')
 	Tycoon:SetAttribute("OwnerUserID", player.UserId)
 	task.wait()
+	--PlayerDataService:Set(player, "Tycoon", {Unlocked = {}})
 	loadTycoon(player, Tycoon)
-	
 	--[[(EX) at the end, the owners list and the claimed list both have a new entry
 		tycoonOwners[Dued1] = "CrimsonCherries"
 		tycoonClaimed["CrimsonCherries"] = Dued1
